@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser-arcade-physics.min.js"></script>
+
+    <style>
+        body {
+            margin: 0px;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div id="thegame"></div>
+
+    <script>
+        window.onload = function () {
+            var config = {
+                type: Phaser.AUTO,
+                scale: {
+                    mode: Phaser.Scale.FIT,
+                    autoCenter: Phaser.Scale.CENTER_BOTH,
+                    parent: "thegame",
+                    // width: 370,
+                    // height: 160,
+                    width: 555,
+                    height: 220,
+                    // width: 740,
+                    // height: 320,
+                },
+                physics: {
+                    default: 'arcade',
+                    arcade: {
+                        gravity: { y: 0 },
+                        debug: true,
+
+                    }
+                },
+                scene: {
+                    preload: preload,
+                    create: create,
+                    update: update,
+                }
+            };
+
+            var game = new Phaser.Game(config);
+            window.focus();
+        }
+
+        function preload() {
+
+            // map
+            this.load.tilemapTiledJSON("map", "./assets/underwater_v4.json")
+
+
+            // tile spritesheets used in map
+            // 1) Underwaterlands_Tile_Set
+            // 2) Underwater lands Tile Set 16x16 ?
+            this.load.image(
+                "underwater-tiles",
+                "./assets/Underwaterlands_Tile_Set.png"
+            );
+            this.load.image(
+                "caves",
+                "./assets/main_lev_buildA.png"
+            );
+
+            // bg1
+            this.load.image(
+                "bg1",
+                "./assets/bg1.png"
+            );
+            // bg2
+            this.load.image(
+                "bg2",
+                "./assets/bg2.png"
+            );
+            // bg3
+            this.load.image(
+                "bg3",
+                "./assets/bg3.png"
+            );
+
+            // tane
+            this.load.spritesheet(
+                "tane-drowning",
+                "./assets/spritesheet_drowning.png",
+                {
+                    frameWidth: 128,
+                    frameHeight: 128,
+                }
+            );
+            this.load.spritesheet(
+                "tane-floating",
+                "./assets/spritesheet_floating.png",
+                {
+                    frameWidth: 128,
+                    frameHeight: 128,
+                }
+            );
+            this.load.spritesheet(
+                "tane-swimming",
+                "./assets/spritesheet_swimming.png",
+                {
+                    frameWidth: 128,
+                    frameHeight: 128,
+                }
+            );
+
+
+        }
+
+        function create() {
+            // add map
+            const map = this.make.tilemap({
+                key: "map",
+            });
+
+            // add map tiles (1st param name of tilesheet in Tiled, 2nd param key for tilesheet asset)
+            const underwaterTileset = map.addTilesetImage("Underwaterlands_Tile_Set", "underwater-tiles");
+            const underwaterTileset2 = map.addTilesetImage("main_lev_buildA", "caves");
+
+            // add Tiled layers
+            const walls = map
+                .createLayer("walls", underwaterTileset, 0, 0)
+                .setOrigin(0.5, 0.5)
+                .setDepth(100)
+            const walls2 = map
+                .createLayer("cave2", underwaterTileset2, 0, 0)
+                .setOrigin(0.5, 0.5)
+                .setDepth(300)
+
+
+
+            // add tane
+            this.player = this.physics.add.sprite(this.game.config.width / 2, this.game.config.height / 2, "tane-swimming");
+            this.player.setScale(0.5, 0.5)
+                .setDepth(110)
+            this.player.body.setSize(this.player.width - 40, 30).setOffset(20, 50);
+
+            // create user input via keyboard keys
+            this.cursors = this.input.keyboard.createCursorKeys();
+
+            // player animations
+            this.anims.create({
+                key: "tane-swim",
+                frames: "tane-swimming",
+                frameRate: 7,
+                repeat: -1,
+            });
+
+            // camera follow player
+            this.cameras.main.startFollow(this.player);
+
+            // set camera limits
+            this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+
+            // repeating background
+            var background1 = this.add.tileSprite(0, 0, map.widthInPixels, map.heightInPixels, 'bg1')
+                .setOrigin(0)
+                .setDepth(90)
+                .setScale(1.6)
+                .setScrollFactor(0.2)
+            var background2 = this.add.tileSprite(0, 0, map.widthInPixels, map.heightInPixels, 'bg2')
+                .setOrigin(0)
+                .setDepth(90)
+                .setScale(1.6)
+                .setScrollFactor(0.3)
+            var background3 = this.add.tileSprite(0, 0, map.widthInPixels, map.heightInPixels, 'bg3')
+                .setOrigin(0)
+                .setDepth(90)
+                .setScale(1.6)
+                .setScrollFactor(0.4)
+
+            this.physics.add.existing(background1, true);
+            this.physics.add.existing(background2, true);
+            this.physics.add.existing(background3, true);
+
+
+        }
+
+        function update() {
+
+
+            // player controls
+            this.player.body.setVelocity(0);
+
+            // Horizontal movement
+            if (this.cursors.left.isDown) {
+                this.player.body.setVelocityX(-180);
+            } else if (this.cursors.right.isDown) {
+                this.player.body.setVelocityX(180);
+            }
+
+            // Vertical movement
+            if (this.cursors.up.isDown) {
+                this.player.body.setVelocityY(-180);
+            } else if (this.cursors.down.isDown) {
+                this.player.body.setVelocityY(180);
+            }
+
+            // Update the animation last and give left/right animations precedence over up/down animations
+            if (this.cursors.left.isDown) {
+                this.player.anims.play("tane-swim", true);
+                this.player.flipX = false;
+            } else if (this.cursors.right.isDown) {
+                this.player.anims.play("tane-swim", true);
+                this.player.flipX = true;
+            } else if (this.cursors.up.isDown) {
+                this.player.anims.play("tane-swim", true);
+            } else if (this.cursors.down.isDown) {
+                this.player.anims.play("tane-swim", true);
+            } else {
+                this.player.anims.stop();
+            }
+        }
+
+
+    </script>
+
+</body>
+
+</html>
