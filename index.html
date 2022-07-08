@@ -18,6 +18,9 @@
 
     <script>
         let isInAirpocket = false
+        let enemyVelocity = 100;
+        let jellyVelocity = 20;
+
         window.onload = function () {
             var config = {
                 type: Phaser.AUTO,
@@ -37,7 +40,6 @@
                     arcade: {
                         gravity: { y: 0 },
                         debug: true,
-
                     }
                 },
                 scene: {
@@ -46,7 +48,6 @@
                     update: update,
                 }
             };
-
             var game = new Phaser.Game(config);
             window.focus();
         }
@@ -110,138 +111,65 @@
                     frameHeight: 128,
                 }
             );
+            // angel fish
+            this.load.spritesheet(
+                "angler-fish",
+                "./assets/fish-angler-sheet.png",
+                {
+                    frameWidth: 32,
+                    frameHeight: 32,
+                }
+            );
+            // crab
+            this.load.spritesheet(
+                "crab-claws",
+                "./assets/crab-claws.png",
+                {
+                    frameWidth: 32,
+                    frameHeight: 32,
+                }
+            );
+            // jellyfish
+            this.load.spritesheet(
+                "jellyfish",
+                "./assets/jellyfish.png",
+                {
+                    frameWidth: 128,
+                    frameHeight: 128,
+                }
+            );
 
         }
 
         function create() {
-            // add map
-            const map = this.make.tilemap({
-                key: "map",
-            });
-
-            // add map tiles (1st param name of tilesheet in Tiled, 2nd param key for tilesheet asset)
-            const underwaterTileset = map.addTilesetImage("Underwaterlands_Tile_Set", "underwater-tiles");
-            const underwaterTileset2 = map.addTilesetImage("main_lev_buildA", "caves");
-
-            // add Tiled layers
-            const walls = map
-                .createLayer("walls", underwaterTileset, 0, 0)
-                .setOrigin(0.5, 0.5)
-                .setDepth(100)
-            const walls2 = map
-                .createLayer("cave2", underwaterTileset2, 0, 0)
-                .setOrigin(0.5, 0.5)
-                .setDepth(301)
-            const airpocketLayer = map
-                .createLayer("AirpocketTileLayer", underwaterTileset, 0, 0)
-                .setOrigin(0.5, 0.5)
-                .setDepth(200)
-            const airpocketWaveLayer = map
-                .createLayer("AirpocketWaveTileLayer", underwaterTileset, 0, 0)
-                .setOrigin(0.5, 0.5)
-                .setDepth(300)
-
-            walls2.setCollisionByExclusion(-1, true);
-
-
-
-            // add tane
-            this.player = this.physics.add.sprite(this.game.config.width / 2, this.game.config.height / 2, "tane-swimming");
-            this.player.setScale(0.5, 0.5)
-                .setDepth(201)
-            this.player.body.setSize(this.player.width - 60, 30).setOffset(35, 50);
-            this.player.setTint(0xd1deff);
-            // this.player.setCollideWorldBounds(true);
-            this.physics.add.collider(this.player, walls2);
-
-            // player air pocket overlap exit
-            this.player.on("overlapend", function () {
-                console.log("overlapend");
-                isInAirpocket = false
-                this.setTint(0xd1deff);
-            });
-
-            // create user input via keyboard keys
-            this.cursors = this.input.keyboard.createCursorKeys();
-
-            // player animations
-            this.anims.create({
-                key: "tane-swim",
-                frames: "tane-swimming",
-                frameRate: 7,
-                repeat: -1,
-            });
-            this.anims.create({
-                key: "tane-float",
-                frames: "tane-floating",
-                frameRate: 7,
-                repeat: -1,
-            });
-
-            // camera follow player
-            this.cameras.main.startFollow(this.player);
-
-            // set camera limits
-            this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
-
-            // repeating background
-            var background1 = this.add.tileSprite(0, 0, map.widthInPixels, map.heightInPixels, 'bg1')
-                .setOrigin(0)
-                .setDepth(90)
-                .setScale(1.6)
-                .setScrollFactor(0.2)
-            var background2 = this.add.tileSprite(0, 0, map.widthInPixels, map.heightInPixels, 'bg2')
-                .setOrigin(0)
-                .setDepth(90)
-                .setScale(1.6)
-                .setScrollFactor(0.3)
-            var background3 = this.add.tileSprite(0, 0, map.widthInPixels, map.heightInPixels, 'bg3')
-                .setOrigin(0)
-                .setDepth(90)
-                .setScale(1.6)
-                .setScrollFactor(0.4)
-
-            this.physics.add.existing(background1, true);
-            this.physics.add.existing(background2, true);
-            this.physics.add.existing(background3, true);
-
-            // get airpocket
-            let blockers = map.filterObjects("AirpocketObjectLayer", (obj) => obj.type == "airpocketBlocker");
-            let airpockets = map.filterObjects("AirpocketObjectLayer", (obj) => obj.type == "airpocket");
-            console.log("blockers", blockers)
-            blockers.forEach(blocker => {
-                let newBlocker = this.add
-                    .zone(blocker.x, blocker.y, blocker.width, blocker.height + 4)
-                    .setOrigin(0, 0)
-                // .setScale(mapScale)
-                // add physics to the garden zone
-                // this.physics.world.enable(newBlocker);
-                this.physics.add.existing(newBlocker, true);
-                // player in airpocket overlap
-                this.physics.add.collider(this.player, newBlocker, touchingBlock, null, this);
-            }, this);
-            airpockets.forEach(airpocket => {
-                let newAirpocket = this.add
-                    .zone(airpocket.x, airpocket.y, airpocket.width, airpocket.height)
-                    .setOrigin(0, 0)
-                // .setScale(mapScale)
-                // add physics to the garden zone
-                this.physics.world.enable(newAirpocket);
-                // this.physics.add.existing(newAirpocket, true);
-                // player in airpocket overlap
-                this.physics.add.overlap(this.player, newAirpocket, inAirpocket, null, this)
-            }, this);
-
-
+            addMap.call(this)
+            addPlayer.call(this)
+            addAnimations.call(this)
+            addAirpockets.call(this)
+            addEnemyBounds.call(this)
+            addEnemys.call(this)
+            addColliders.call(this)
+            addControls.call(this)
+            addCamera.call(this)
 
         }
 
+        /* =================
+                UPDATE
+        ================= */
         function update() {
             // touching
             var touching = !this.player.body.touching.none;
             var wasTouching = !this.player.body.wasTouching.none;
 
             if (!touching && wasTouching) this.player.emit("overlapend");
+
+            if (this.player.anims.getName() === 'tane-float') {
+
+            } else {
+                this.player.setScale(0.5)
+
+            }
 
 
 
@@ -276,6 +204,7 @@
                     this.player.anims.play("tane-swim", true);
                 } else {
                     // this.player.anims.stop();
+                    this.player.setScale(0.45)
                     this.player.anims.play("tane-float", true);
                 }
             } else if (isInAirpocket) {
@@ -295,6 +224,247 @@
             }
         }
 
+        /* =================
+        STANDALONG FUNCTIONS
+        ================= */
+        function addMap() {
+            // add map
+            this.map = this.make.tilemap({
+                key: "map",
+            });
+
+            // add map tiles (1st param name of tilesheet in Tiled, 2nd param key for tilesheet asset)
+            const underwaterTileset = this.map.addTilesetImage("Underwaterlands_Tile_Set", "underwater-tiles");
+            const underwaterTileset2 = this.map.addTilesetImage("main_lev_buildA", "caves");
+
+            // add map layers from Tiled
+            // this.walls = this.map
+            //     .createLayer("walls", underwaterTileset, 0, 0)
+            //     .setOrigin(0.5, 0.5)
+            //     .setDepth(100)
+            this.walls2 = this.map
+                .createLayer("cave2", underwaterTileset2, 0, 0)
+                .setOrigin(0.5, 0.5)
+                .setDepth(301)
+            this.airpocketLayer = this.map
+                .createLayer("AirpocketTileLayer", underwaterTileset, 0, 0)
+                .setOrigin(0.5, 0.5)
+                .setDepth(200)
+            this.airpocketWaveLayer = this.map
+                .createLayer("AirpocketWaveTileLayer", underwaterTileset, 0, 0)
+                .setOrigin(0.5, 0.5)
+                .setDepth(300)
+
+            // make cave2 layer collision
+            this.walls2.setCollisionByExclusion(-1, true);
+
+            // repeating parallax background
+            var background1 = this.add.tileSprite(0, 0, this.map.widthInPixels, this.map.heightInPixels, 'bg1')
+                .setOrigin(0)
+                .setDepth(90)
+                .setScale(1.6)
+                .setScrollFactor(0.2)
+            var background2 = this.add.tileSprite(0, 0, this.map.widthInPixels, this.map.heightInPixels, 'bg2')
+                .setOrigin(0)
+                .setDepth(90)
+                .setScale(1.6)
+                .setScrollFactor(0.3)
+            var background3 = this.add.tileSprite(0, 0, this.map.widthInPixels, this.map.heightInPixels, 'bg3')
+                .setOrigin(0)
+                .setDepth(90)
+                .setScale(1.6)
+                .setScrollFactor(0.4)
+            this.physics.add.existing(background1, true);
+            this.physics.add.existing(background2, true);
+            this.physics.add.existing(background3, true);
+
+        }
+        function addPlayer() {
+            // add tane
+            this.player = this.physics.add.sprite(this.game.config.width / 2, this.game.config.height / 2, "tane-swimming");
+            this.player.setScale(0.5, 0.5)
+                .setDepth(201)
+            this.player.body.setSize(this.player.width - 60, 30).setOffset(35, 50);
+            this.player.setTint(0xd1deff);
+            // player air pocket overlap exit
+            this.player.on("overlapend", function () {
+                console.log("overlapend");
+                isInAirpocket = false
+                this.setTint(0xd1deff);
+            });
+        }
+        function addAirpockets() {
+            // create air pockets
+            let blockers = this.map.filterObjects("AirpocketObjectLayer", (obj) => obj.type == "airpocketBlocker");
+            let airpockets = this.map.filterObjects("AirpocketObjectLayer", (obj) => obj.type == "airpocket");
+            blockers.forEach(blocker => {
+
+                let newBlocker = this.add
+                    .zone(blocker.x, blocker.y, blocker.width, blocker.height + 4)
+                    .setOrigin(0, 0)
+                // .setScale(mapScale)
+                // add physics to the garden zone
+                // this.physics.world.enable(newBlocker);
+                this.physics.add.existing(newBlocker, true);
+                // player in airpocket overlap
+                this.physics.add.collider(this.player, newBlocker, touchingBlock, null, this);
+
+
+
+            }, this);
+            airpockets.forEach(airpocket => {
+                let newAirpocket = this.add
+                    .zone(airpocket.x, airpocket.y, airpocket.width, airpocket.height)
+                    .setOrigin(0, 0)
+                // .setScale(mapScale)
+                // add physics to the garden zone
+                this.physics.world.enable(newAirpocket);
+                // this.physics.add.existing(newAirpocket, true);
+                // player in airpocket overlap
+                this.physics.add.overlap(this.player, newAirpocket, inAirpocket, null, this)
+            }, this);
+        }
+        function addEnemyBounds() {
+            this.boundObjects = this.physics.add
+                .group({
+                    allowGravity: false,
+                    immovable: true,
+                })
+                .setVisible(false);
+            let bounds = this.map.filterObjects("Bounds", (obj) => obj.type == "bound");
+
+            bounds.forEach((boundObj) => {
+                let boundBox = this.boundObjects
+                    .create(boundObj.x, boundObj.y, null)
+                    .setOrigin(0.5, 0.5)
+                    .setVisible(false);
+                boundBox.name = boundObj.name;
+                boundBox.type = boundObj.type;
+            });
+        }
+        function addEnemys() {
+            this.enemyObjects = this.physics.add
+                .group({
+                    allowGravity: false,
+                    immovable: true,
+                })
+            let enemys = this.map.filterObjects("Enemy", (obj) => obj.type == "enemy");
+            let enemyVerticals = this.map.filterObjects("Enemy", (obj) => obj.type == "enemyV");
+            console.log("enemys", enemys)
+
+            enemys.forEach((enemyObj) => {
+                let enemy = this.enemyObjects
+                    .create(enemyObj.x, enemyObj.y, "angler-fish")
+                    .setOrigin(0.5, 0.5)
+                    .setDepth(100)
+                enemy.name = enemyObj.name;
+                enemy.type = enemyObj.type;
+                let random = Phaser.Math.Between(1, 2);
+                switch (random) {
+                    case 1:
+                        enemy.body.velocity.x = -enemyVelocity;
+                    case 2:
+                        enemy.body.velocity.x = enemyVelocity;
+                }
+                enemy.play("angler-fish");
+                // tween
+                this.tweens.add({
+                    targets: enemy,
+                    ease: 'ease',
+                    y: enemy.y - 5,
+                    duration: 200,
+                    yoyo: true,
+                    repeat: -1
+                });
+            });
+            enemyVerticals.forEach((enemyObj) => {
+                let enemy = this.enemyObjects
+                    .create(enemyObj.x, enemyObj.y, "jellyfish")
+                    .setOrigin(0.5, 0.5)
+                    .setDepth(100)
+                    .setScale(0.4)
+                // .setRotation(80)
+                enemy.name = enemyObj.name;
+                enemy.type = enemyObj.type;
+                let random = Phaser.Math.Between(1, 2);
+                switch (random) {
+                    case 1:
+                        enemy.body.velocity.y = -jellyVelocity;
+                    case 2:
+                        enemy.body.velocity.y = jellyVelocity;
+                }
+                enemy.play("jellyfish");
+                // tween
+                this.tweens.add({
+                    targets: enemy,
+                    ease: 'ease',
+                    x: enemy.x - 5,
+                    duration: 200,
+                    yoyo: true,
+                    repeat: -1
+                });
+            });
+
+
+        }
+        function addColliders() {
+            // this.player.setCollideWorldBounds(true);
+            this.physics.add.collider(this.player, this.walls2);
+
+            // bounds colliders
+            this.physics.add.collider(
+                this.enemyObjects,
+                this.boundObjects,
+                touchingBound,
+                null,
+                this
+            );
+        }
+        function addControls() {
+            // create user input via keyboard keys
+            this.cursors = this.input.keyboard.createCursorKeys();
+        }
+        function addAnimations() {
+            // player animations
+            this.anims.create({
+                key: "tane-swim",
+                frames: "tane-swimming",
+                frameRate: 7,
+                repeat: -1,
+            });
+            this.anims.create({
+                key: "tane-float",
+                frames: "tane-floating",
+                frameRate: 7,
+                repeat: -1,
+            });
+            this.anims.create({
+                key: "angler-fish",
+                frames: "angler-fish",
+                frameRate: 7,
+                repeat: -1,
+            });
+            this.anims.create({
+                key: "crab-claws",
+                frames: "crab-claws",
+                frameRate: 7,
+                repeat: -1,
+            });
+            this.anims.create({
+                key: "jellyfish",
+                frames: "jellyfish",
+                frameRate: 7,
+                repeat: -1,
+            });
+        }
+        function addCamera() {
+            // camera follow player
+            this.cameras.main.startFollow(this.player);
+
+            // set camera limits
+            this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
+        }
+
         function inAirpocket(player, airpocket) {
             // console.log("in airpocket: player.body:", player.body)
             isInAirpocket = true
@@ -304,6 +474,28 @@
         }
         function touchingBlock(player, blocker) {
             // console.log("blocker: player.body:", player.body)
+        }
+        function touchingBound(enemy, bound) {
+            let enemyVel = enemy.type == 'enemy' ? enemyVelocity : jellyVelocity
+
+            // was moving right
+            if (enemy.body.velocity.x > 0 && enemy.body.velocity.y == 0) {
+                enemy.body.velocity.x = -enemyVel;
+                enemy.setFlipX(true);
+            }
+            // was moving left
+            else if (enemy.body.velocity.x <= 0 && enemy.body.velocity.y == 0) {
+                enemy.body.velocity.x = enemyVel;
+                enemy.setFlipX(false);
+            }
+            // was moving up
+            else if (enemy.body.velocity.y < 0 && enemy.body.velocity.x == 0) {
+                enemy.body.velocity.y = enemyVel;
+            }
+            // was moving up
+            else if (enemy.body.velocity.y > 0 && enemy.body.velocity.x == 0) {
+                enemy.body.velocity.y = -enemyVel;
+            }
         }
     </script>
 
