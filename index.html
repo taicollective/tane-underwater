@@ -7,6 +7,7 @@
     <style>
         body {
             margin: 0px;
+            background: #533d8e;
         }
     </style>
 
@@ -16,6 +17,7 @@
     <div id="thegame"></div>
 
     <script>
+        let isInAirpocket = false
         window.onload = function () {
             var config = {
                 type: Phaser.AUTO,
@@ -64,7 +66,7 @@
             );
             this.load.image(
                 "caves",
-                "./assets/main_lev_buildA.png"
+                "./assets/main_lev_buildA.png",
             );
 
             // bg1
@@ -109,7 +111,6 @@
                 }
             );
 
-
         }
 
         function create() {
@@ -130,15 +131,35 @@
             const walls2 = map
                 .createLayer("cave2", underwaterTileset2, 0, 0)
                 .setOrigin(0.5, 0.5)
+                .setDepth(301)
+            const airpocketLayer = map
+                .createLayer("AirpocketTileLayer", underwaterTileset, 0, 0)
+                .setOrigin(0.5, 0.5)
+                .setDepth(200)
+            const airpocketWaveLayer = map
+                .createLayer("AirpocketWaveTileLayer", underwaterTileset, 0, 0)
+                .setOrigin(0.5, 0.5)
                 .setDepth(300)
+
+            walls2.setCollisionByExclusion(-1, true);
 
 
 
             // add tane
             this.player = this.physics.add.sprite(this.game.config.width / 2, this.game.config.height / 2, "tane-swimming");
             this.player.setScale(0.5, 0.5)
-                .setDepth(110)
-            this.player.body.setSize(this.player.width - 40, 30).setOffset(20, 50);
+                .setDepth(201)
+            this.player.body.setSize(this.player.width - 60, 30).setOffset(35, 50);
+            this.player.setTint(0xd1deff);
+            // this.player.setCollideWorldBounds(true);
+            this.physics.add.collider(this.player, walls2);
+
+            // player air pocket overlap exit
+            this.player.on("overlapend", function () {
+                console.log("overlapend");
+                isInAirpocket = false
+                this.setTint(0xd1deff);
+            });
 
             // create user input via keyboard keys
             this.cursors = this.input.keyboard.createCursorKeys();
@@ -147,6 +168,12 @@
             this.anims.create({
                 key: "tane-swim",
                 frames: "tane-swimming",
+                frameRate: 7,
+                repeat: -1,
+            });
+            this.anims.create({
+                key: "tane-float",
+                frames: "tane-floating",
                 frameRate: 7,
                 repeat: -1,
             });
@@ -178,14 +205,48 @@
             this.physics.add.existing(background2, true);
             this.physics.add.existing(background3, true);
 
+            // get airpocket
+            let blockers = map.filterObjects("AirpocketObjectLayer", (obj) => obj.type == "airpocketBlocker");
+            let airpockets = map.filterObjects("AirpocketObjectLayer", (obj) => obj.type == "airpocket");
+            console.log("blockers", blockers)
+            blockers.forEach(blocker => {
+                let newBlocker = this.add
+                    .zone(blocker.x, blocker.y, blocker.width, blocker.height + 4)
+                    .setOrigin(0, 0)
+                // .setScale(mapScale)
+                // add physics to the garden zone
+                // this.physics.world.enable(newBlocker);
+                this.physics.add.existing(newBlocker, true);
+                // player in airpocket overlap
+                this.physics.add.collider(this.player, newBlocker, touchingBlock, null, this);
+            }, this);
+            airpockets.forEach(airpocket => {
+                let newAirpocket = this.add
+                    .zone(airpocket.x, airpocket.y, airpocket.width, airpocket.height)
+                    .setOrigin(0, 0)
+                // .setScale(mapScale)
+                // add physics to the garden zone
+                this.physics.world.enable(newAirpocket);
+                // this.physics.add.existing(newAirpocket, true);
+                // player in airpocket overlap
+                this.physics.add.overlap(this.player, newAirpocket, inAirpocket, null, this)
+            }, this);
+
+
 
         }
 
         function update() {
+            // touching
+            var touching = !this.player.body.touching.none;
+            var wasTouching = !this.player.body.wasTouching.none;
+
+            if (!touching && wasTouching) this.player.emit("overlapend");
+
 
 
             // player controls
-            this.player.body.setVelocity(0);
+            if (!isInAirpocket) this.player.body.setVelocity(0);
 
             // Horizontal movement
             if (this.cursors.left.isDown) {
@@ -202,22 +263,48 @@
             }
 
             // Update the animation last and give left/right animations precedence over up/down animations
-            if (this.cursors.left.isDown) {
-                this.player.anims.play("tane-swim", true);
-                this.player.flipX = false;
-            } else if (this.cursors.right.isDown) {
-                this.player.anims.play("tane-swim", true);
-                this.player.flipX = true;
-            } else if (this.cursors.up.isDown) {
-                this.player.anims.play("tane-swim", true);
-            } else if (this.cursors.down.isDown) {
-                this.player.anims.play("tane-swim", true);
-            } else {
-                this.player.anims.stop();
+            if (!isInAirpocket) {
+                if (this.cursors.left.isDown) {
+                    this.player.anims.play("tane-swim", true);
+                    this.player.flipX = false;
+                } else if (this.cursors.right.isDown) {
+                    this.player.anims.play("tane-swim", true);
+                    this.player.flipX = true;
+                } else if (this.cursors.up.isDown) {
+                    this.player.anims.play("tane-swim", true);
+                } else if (this.cursors.down.isDown) {
+                    this.player.anims.play("tane-swim", true);
+                } else {
+                    // this.player.anims.stop();
+                    this.player.anims.play("tane-float", true);
+                }
+            } else if (isInAirpocket) {
+                if (this.cursors.left.isDown) {
+                    this.player.anims.play("tane-float", true);
+                    this.player.flipX = false;
+                } else if (this.cursors.right.isDown) {
+                    this.player.anims.play("tane-float", true);
+                    this.player.flipX = true;
+                } else if (this.cursors.up.isDown) {
+                    this.player.anims.play("tane-float", true);
+                } else if (this.cursors.down.isDown) {
+                    this.player.anims.play("tane-float", true);
+                } else {
+                    this.player.anims.play("tane-float", true);
+                }
             }
         }
 
-
+        function inAirpocket(player, airpocket) {
+            // console.log("in airpocket: player.body:", player.body)
+            isInAirpocket = true
+            this.player.body.setVelocityY(-50);
+            this.player.clearTint()
+            // player.setTexture('tane-floating')
+        }
+        function touchingBlock(player, blocker) {
+            // console.log("blocker: player.body:", player.body)
+        }
     </script>
 
 </body>
