@@ -1,7 +1,7 @@
 Tāne Underwater
 =================
 
-Live game: [https://tane-pacman.glitch.me/](https://tane-pacman.glitch.me/)
+Live game: [https://tane-underwater.glitch.me/](https://tane-underwater.glitch.me/)
 
 ------------
 
